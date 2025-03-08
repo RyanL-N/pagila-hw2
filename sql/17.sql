@@ -8,3 +8,16 @@
  * You might find the following stackoverflow answer useful for figuring out the syntax:
  * <https://stackoverflow.com/a/5700744>.
  */
+SELECT RANK() OVER (ORDER BY revenue DESC) AS rank,
+       title,
+       revenue,
+       SUM(revenue) OVER (ORDER BY revenue DESC) AS "Total Revenue"
+FROM (
+    SELECT film.title, SUM(amount) AS revenue
+    FROM rental
+    JOIN payment USING (rental_id)
+    JOIN inventory USING (inventory_id)
+    JOIN film USING (film_id)
+    GROUP BY film.title
+) AS film_revenue;
+
