@@ -11,14 +11,20 @@
  * Use a where clause to restrict results to the subquery.
  */
 WITH top_films AS (
-    SELECT film_id
-    FROM film
-    ORDER BY rental_rate * rental_duration DESC
+    -- Select the top 5 most profitable films
+    SELECT film_id 
+    FROM film 
+    JOIN inventory USING (film_id)
+    JOIN rental USING (inventory_id)
+    JOIN payment USING (rental_id)
+    GROUP BY film_id
+    ORDER BY SUM(amount) DESC 
     LIMIT 5
 )
-SELECT DISTINCT customer.customer_id, customer.first_name, customer.last_name
+SELECT DISTINCT customer.customer_id 
 FROM customer
 JOIN rental USING (customer_id)
 JOIN inventory USING (inventory_id)
-WHERE film_id IN (SELECT film_id FROM top_films);
+WHERE inventory.film_id IN (SELECT film_id FROM top_films)
+ORDER BY customer.customer_id;
 

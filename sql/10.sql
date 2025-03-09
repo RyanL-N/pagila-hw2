@@ -19,5 +19,6 @@ WITH film_profit AS (
 SELECT feature AS special_feature, SUM(profit) AS profit
 FROM film
 JOIN film_profit USING (film_id), unnest(special_features) AS feature
-GROUP BY feature;
+GROUP BY feature
+ORDER BY special_feature;
 

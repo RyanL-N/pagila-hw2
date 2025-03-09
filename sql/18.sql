@@ -7,22 +7,46 @@
  * The `to_char` function can be used to achieve the correct formatting of your percentage.
  * See: <https://www.postgresql.org/docs/current/functions-formatting.html#FUNCTIONS-FORMATTING-EXAMPLES-TABLE>
  */
-WITH revenue_data AS (
-    SELECT RANK() OVER (ORDER BY revenue DESC) AS rank, 
-           title, 
-           revenue,
-           SUM(revenue) OVER (ORDER BY revenue DESC) AS "Total Revenue",
-           SUM(revenue) OVER () AS grand_total
+WITH ranked_films AS (
+    SELECT RANK() OVER (ORDER BY revenue DESC) AS rank,
+           DENSE_RANK() OVER (ORDER BY revenue DESC) AS dense_rank,
+           title,
+           revenue
     FROM (
-        SELECT film.title, SUM(amount) AS revenue 
-        FROM rental 
-        JOIN payment USING (rental_id)
-        JOIN inventory USING (inventory_id)
-        JOIN film USING (film_id)
+        SELECT film.title, 
+               COALESCE(ROUND(SUM(payment.amount), 2), 0.00) AS revenue
+        FROM film
+        LEFT JOIN inventory USING (film_id)
+        LEFT JOIN rental USING (inventory_id)
+        LEFT JOIN payment USING (rental_id)
         GROUP BY film.title
     ) AS film_revenue
+),
+cumulative_total AS (
+    SELECT rank,
+           title,
+           revenue,
+           SUM(revenue) OVER (ORDER BY dense_rank ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS "total revenue",
+           SUM(revenue) OVER () AS "grand_total"
+    FROM ranked_films
+),
+final_output AS (
+    SELECT rank,
+           title,
+           revenue,
+           MAX("total revenue") OVER (PARTITION BY rank) AS "total revenue",
+           ROUND(100.00 * MAX("total revenue") OVER (PARTITION BY rank) / "grand_total", 2) AS "percent revenue"
+    FROM cumulative_total
 )
-SELECT rank, title, revenue, "Total Revenue",
-       ROUND(100.0 * "Total Revenue" / grand_total, 2) AS "Percent Revenue"
-FROM revenue_data;
+SELECT rank,
+       title,
+       revenue,
+       "total revenue",
+       CASE 
+           WHEN "total revenue" = (SELECT MAX("total revenue") FROM final_output) 
+           THEN '100.00' 
+           ELSE TO_CHAR("percent revenue", 'FM00.00')
+       END AS "percent revenue"
+FROM final_output
+ORDER BY rank ASC, title ASC;
 

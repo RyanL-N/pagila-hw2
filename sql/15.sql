@@ -1,10 +1,12 @@
 /*
  * Compute the total revenue for each film.
  */
-SELECT title, SUM(amount) AS revenue
-FROM rental
-JOIN payment USING (rental_id)
-JOIN inventory USING (inventory_id)
-JOIN film USING (film_id)
-GROUP BY title;
+SELECT film.title, 
+       COALESCE(SUM(payment.amount), 0.00) AS revenue
+FROM film
+LEFT JOIN inventory USING (film_id)
+LEFT JOIN rental USING (inventory_id)
+LEFT JOIN payment USING (rental_id)
+GROUP BY film.title
+ORDER BY revenue DESC, film.title ASC;
 

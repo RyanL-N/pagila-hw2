@@ -9,5 +9,6 @@
 SELECT title
 FROM film
 WHERE 'Behind the Scenes' = ANY(special_features)
-AND 'Trailers' = ANY(special_features);
+AND 'Trailers' = ANY(special_features)
+ORDER BY title;
 
